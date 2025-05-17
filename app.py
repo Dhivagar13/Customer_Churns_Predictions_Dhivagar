@@ -77,6 +77,16 @@ if uploaded_file is not None:
     # Load data once for all menu items
     data = pd.read_csv(uploaded_file)
 
+    # Fix data types conversion issues (convert problematic columns)
+    for col in data.columns:
+        if data[col].dtype == 'object':
+            try:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+            except Exception:
+                # If conversion fails, ignore
+                pass
+    data.fillna(0, inplace=True)  # Fill NaNs after conversion
+
     # Create churn column for analysis
     if 'total_rech_amt_9' in data.columns:
         data['Churn'] = data['total_rech_amt_9'].apply(lambda x: 1 if x == 0 else 0)
@@ -98,6 +108,7 @@ if uploaded_file is not None:
     if target is None:
         st.sidebar.error("Churn column missing; cannot proceed with modeling.")
         st.stop()
+
     features = features.select_dtypes(include=[np.number]).fillna(0)
     le = LabelEncoder()
     target_encoded = le.fit_transform(target)
@@ -250,3 +261,4 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to get started.")
+
