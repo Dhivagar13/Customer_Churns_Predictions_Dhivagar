@@ -77,15 +77,15 @@ if uploaded_file is not None:
     # Load data once for all menu items
     data = pd.read_csv(uploaded_file)
 
-    # Fix data types conversion issues (convert problematic columns)
+    # Attempt to fix data type issues causing pyarrow conversion failures
     for col in data.columns:
-        if data[col].dtype == 'object':
+        if data[col].dtype.name == 'Int64' or data[col].dtype == object:
             try:
                 data[col] = pd.to_numeric(data[col], errors='coerce')
             except Exception:
-                # If conversion fails, ignore
+                # If conversion fails, keep original dtype
                 pass
-    data.fillna(0, inplace=True)  # Fill NaNs after conversion
+    data.fillna(0, inplace=True)
 
     # Create churn column for analysis
     if 'total_rech_amt_9' in data.columns:
@@ -104,6 +104,7 @@ if uploaded_file is not None:
         features = data.drop(columns=cols_to_drop)
     else:
         features = data.copy()
+
     target = data['Churn'] if 'Churn' in data.columns else None
     if target is None:
         st.sidebar.error("Churn column missing; cannot proceed with modeling.")
@@ -112,6 +113,7 @@ if uploaded_file is not None:
     features = features.select_dtypes(include=[np.number]).fillna(0)
     le = LabelEncoder()
     target_encoded = le.fit_transform(target)
+
     X_train, X_test, y_train, y_test = train_test_split(features, target_encoded, test_size=0.2, random_state=42)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
@@ -261,4 +263,3 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to get started.")
-
